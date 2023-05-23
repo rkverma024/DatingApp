@@ -1,12 +1,7 @@
 using API.Data;
 using API.Extensions;
-using API.InterfaceServices;
-using API.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using API.Middleware;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +42,7 @@ builder.Services.AddSwagger();
 //        }
 //    };
 
+
 //    setup.AddSecurityDefinition(jwtSecurityScheme.Reference.Id, jwtSecurityScheme);
 
 //    setup.AddSecurityRequirement(new OpenApiSecurityRequirement
@@ -83,12 +79,27 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+
+app.UseMiddleware<ExceptionMiddleware>();
 app.UseCors(builder => builder.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:4200"));
 
 app.UseAuthentication();
 app.UseAuthorization();
 
-
 app.MapControllers();
+
+using var scope = app.Services.CreateScope();
+var services = scope.ServiceProvider;
+try
+{
+    var context = services.GetRequiredService<DataContext>();
+    await context.Database.MigrateAsync();
+    await Seed.SeedUsers(context);
+}
+catch(Exception ex)
+{
+    var logger = services.GetService<ILogger<Program>>();
+    logger.LogError(ex, "An error occurred during migration");
+}
 
 app.Run();
