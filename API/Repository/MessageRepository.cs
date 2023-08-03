@@ -76,7 +76,6 @@ namespace API.Repository
             }
             return mapper.Map<IEnumerable<MessageDto>>(messages);
         }
-
         public async Task<bool> SaveAllAsync()
         {
             return await context.SaveChangesAsync() > 0;
